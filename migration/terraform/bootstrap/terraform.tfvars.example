@@ -1,0 +1,3 @@
+aws_region        = "us-east-1"
+state_bucket_name = "soinkleined-dns-tfstate-ACCOUNT_ID"
+state_key         = "dns/terraform.tfstate"

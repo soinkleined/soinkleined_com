@@ -46,3 +46,15 @@ _zip
 
 /assets/js/*hydejack-*
 /_sass/*/__*__/*
+
+# Terraform state and local backend config. Lock files stay in git.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+plan.json
+override.tf
+backend.hcl
+*.auto.tfvars
+crash.log
+crash.*.log
