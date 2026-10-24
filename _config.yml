@@ -3,13 +3,13 @@
 
 # Uncomment and set the URL of your site (with protocol, e.g. `https://`)
 # NOTE: You don't need to provide this property when hosting on GitHub Pages or Netlify.
-# url:                   https://soinkleined.github.io
+url:                   https://www.soinkleined.com
 
 # Uncomment and set the "base URL" of your site.
 # When your site is in a subdirectory, set to `/<name of directory>`,
 # with a leading `/` but no trailing `/`. Use the empty string '' otherwise.
 # NOTE: You don't need to provide this property when hosting on GitHub Pages or Netlify.
-# baseurl:               '/soinkleined_com'
+baseurl:               ''
 
 
 # General settings
@@ -20,19 +20,19 @@
 lang:                  en
 
 # The title of your blog. Used in the sidebar and the browser tab.
-title:                 Starter Kit
+title:                 So Inkleined Consulting LTD
 
 # A short description (~150 chars) of the page used for the meta description tag.
 # Can use markdown, but no more than one paragraph (enforced by `>`)
 description:           >
-  Hydejack is a boutique Jekyll theme for hackers, nerds, and academics,
-  with a focus on personal sites that are meant to impress.
+  Enterprise UNIX and infrastructure consulting across operating systems,
+  platforms, and industries.
 
 # A shorter description for the sidebar.
-tagline:               Change `tagline` in `_config.yml`
+tagline:               Enterprise UNIX and infrastructure consulting.
 
 # A list of keywords for your blog
-keywords:              []
+keywords:              [UNIX, Linux, infrastructure, consulting, virtualization, cloud]
 
 # A (square) logo for your site.
 # If provided, it will be shown at the top of the sidebar.
@@ -42,32 +42,23 @@ logo:                  /assets/img/logo.png
 # This should be the same author as first entry in `_data/authors.yml`.
 author:
   # Used by `jekyll-feed`:
-  name:                <firstname> <lastname>
-  email:               <mail@domain.tld>
+  name:                David Klein
   # # Used by `jekyll-seo-tag`:
-  # twitter:             <username>
+  twitter:             soinkleined
 
 # Add links to the sidebar.
 menu:
-  - title:             Example
-    url:               /example/
-  - title:             Documentation
-    url:               /docs/
+  - title:             Blog
+    url:               /
   - title:             About
     url:               /about/
 
 # Add links to the footer.
 # Typically you'll want to link to your cookie- or privacy policy (if appliable), etc..
-legal:
-  - title:             LICENSE
-    url:               /LICENSE/
-  - title:             NOTICE
-    url:               /NOTICE/
-  - title:             CHANGELOG
-    url:               /CHANGELOG/
+legal:                 []
 
 # This text will appear in a `<small>` tag in the footer of every page.
-copyright:             © 2024. All rights reserved.
+copyright:             © So Inkleined Consulting LTD. All rights reserved.
 
 # Format of the permalinks
 permalink:             /:categories/:year-:month-:day-:title/
@@ -92,47 +83,38 @@ theme: jekyll-theme-hydejack
 # ----------------------------------------------------------------------------------------
  
 # Sidebar image and theme color of the site.
-accent_image:          /assets/img/sidebar-bg.jpg
-accent_color:          rgb(79,177,186)
+# Logo blue is #236EA9. The live site header is white, so the sidebar stays light.
+accent_image:          none
+accent_color:          rgb(35,110,169)
+theme_color:           rgb(255,255,255)
 
-# This is used for the `theme-color` meta tag,
-# which changes the background color of the browser UI in certain browsers.
-# Defaults to `accent_color`.
-theme_color:           rgb(25,55,71)
+# Favicon and app icon, cropped from the existing wordmark.
+favicon:               /assets/icons/favicon.ico
+apple_touch_icon:      /assets/icons/icon-192x192.png
 
-# IMPORTANT:
-# As of Hydejack 9.2, Google Fonts are turned off by default due to a stronger focus on privacy.
-# Hydejack will use the default font of your visitor's operating system instead.
-# If you want to match the look of hydejack.com, remove the following line and uncomment 
-# the font-related options below:
-
+# Roboto at a light weight, matching soinkleined.com.
 # The string encoding which fonts to fetch from Google Fonts.
 # See: <https://hydejack.com/docs/configuration/>
-# google_fonts:          Roboto+Slab:700|Noto+Sans:400,400i,700,700i
+google_fonts:          Roboto:300,300i,400,400i,500,700
 
 # The text font. Expects a string that is a valid CSS font-family value.
 # To change font-weight, see _sass/variables.scss
-# font:                  Noto Sans, Helvetica, Arial, sans-serif
+font:                  Roboto, Helvetica, Arial, sans-serif
 
 # The font used for headings. Expects a string that is a valid CSS font-family value.
 # To change font-weight, see _sass/variables.scss
-# font_heading:          Roboto Slab, Helvetica, Arial, sans-serif
+font_heading:          Roboto, Helvetica, Arial, sans-serif
 
 # The font used for code blocks. Expects a string that is a valid CSS font-family value. 
 # Defaults to the [System Monospace Font Stack](https://qwtel.com/posts/software/the-monospaced-system-ui-css-font-stack/).
 # font_code:             Fira Code, Menlo, Monaco, Consolas, monospace;
 
 defaults:
-  # You can use this to provide a default accent color and background for
-  # all pages under a given path:
+  # Light sidebar to match the white header on soinkleined.com.
   - scope:
-      path:            hyde/
+      path:            ""
     values:
-      accent_color:    rgb(38,139,210)
-      theme_color:     rgb(32,32,32)
-      accent_image:
-        background:    rgb(32,32,32)
-        overlay:       false
+      invert_sidebar:  true
 
   # Don't include documents in assets in the sitemap
   - scope:
@@ -263,14 +245,10 @@ hydejack:
 
   # Note that dark mode only works in the PRO version of Hydejack.
   dark_mode:
-    # Set to `true` to always use the dark theme.
+    # The existing site is light only.
     always:            false
-
-    # Set to `true` to use the dark theme based on visitors' preference (OS setting).
-    dynamic:           true
-
-    # Set to `true` to allow visitors to switch between light and dark mode.
-    icon:              true
+    dynamic:           false
+    icon:              false
 
   # ⚡️ DANGER ZONE ⚡️
   # ----------------
@@ -313,6 +291,7 @@ exclude:
   - Gemfile
   - Gemfile.lock
   - functions
+  - example
 include:
   - _routes.json
   - .well-known
@@ -350,8 +329,8 @@ plugins:
 #   yandex:              <verification-id>
 
 # Used for twitter cards
-# twitter:
-#   username:            <username>
+twitter:
+  username:            soinkleined
 
 # Used for facebook open graph
 # facebook:
@@ -360,11 +339,12 @@ plugins:
 #   admins:              <id>
 
 # Used on index and about sites
-# social:
-#   name:                <firstname> <lastname>
-#   links:
-#     - https://twitter.com/<username>
-#     - https://github.com/<username>
+social:
+  name:                So Inkleined Consulting LTD
+  links:
+    - https://twitter.com/soinkleined
+    - https://www.facebook.com/soinkleined
+    - https://www.linkedin.com/company/so-inkleined-consulting-ltd
 
 
 # Plugin Configs

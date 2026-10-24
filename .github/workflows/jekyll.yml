@@ -1,0 +1,74 @@
+# Builds this Hydejack site and deploys _site to GitHub Pages.
+# Production host is https://www.soinkleined.com (baseurl '' in _config.yml).
+name: Deploy Jekyll site to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# GITHUB_TOKEN rights required by actions/deploy-pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One Pages deployment at a time. Let an in-progress production deploy finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # jekyll-last-modified-at reads git history for dates.
+          fetch-depth: 0
+
+      - name: Setup Ruby
+        # Version comes from .ruby-version. bundler-cache runs bundle install
+        # into vendor/bundle (see .bundle/config) and caches the result.
+        # Gemfile.lock is gitignored; setup-ruby generates one with bundle lock.
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Setup Node
+        # kramdown-math-katex compiles math through ExecJS, which needs Node.
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v6
+
+      - name: Build with Jekyll
+        # Do not pass --baseurl from steps.pages.outputs.base_path.
+        # That value is /soinkleined_com until the custom domain is saved,
+        # which would prefix every URL. _config.yml already sets baseurl: ''
+        # for https://www.soinkleined.com.
+        run: bundle exec jekyll build
+        env:
+          JEKYLL_ENV: production
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+          # _config.yml publishes .well-known. v5 omits dotfiles unless asked.
+          include-hidden-files: true
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
