@@ -1,4 +1,34 @@
-// You can add CSS rules here that will be inlined into each document.
-// .sidebar a {
-//   text-shadow: rgba(0, 0, 0, 0.25) 0.1rem 0.1rem 0.15rem;
-// }
+// Above-the-fold brand styles. The wordmark is wide, so it must not
+// be cropped into Hydejack's default circular avatar.
+
+.sidebar-about .avatar {
+  width: 16.25rem;
+  max-width: 100%;
+  height: auto;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.sidebar-about .avatar img {
+  width: 100%;
+  height: auto;
+  border-radius: 0;
+}
+
+.sidebar-about > a.sidebar-title > h1,
+.sidebar-about > a.sidebar-title > h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.sidebar-about > a.sidebar-title::after {
+  display: none;
+}

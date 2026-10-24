@@ -1,14 +1,24 @@
-.dl-table {
-  a {
-    @supports ((text-decoration-thickness: initial) and (text-underline-offset: initial)) {
-      text-underline-offset: .8rem;
-    }
-    @supports not ((text-decoration-thickness: initial) and (text-underline-offset: initial)) {
-      padding-bottom: .45rem;
-    }
-  }
+// Match soinkleined.com: Roboto, gray body text, logo navy headings,
+// and the gray text selection from the current site.
 
-  .btn, .gumroad-button  {
-    margin: 1rem 0;
-  }
+body {
+  color: #626262;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #363645;
+}
+
+::selection {
+  background: #949494;
+  color: #fff;
+}
+
+.sidebar {
+  border-right: 1px solid #dddddd;
+}
+
+.sidebar-about .lead {
+  color: #626262;
+  font-weight: 300;
 }

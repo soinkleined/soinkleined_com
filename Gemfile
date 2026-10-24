@@ -8,15 +8,15 @@ source "https://rubygems.org"
 #
 # This will help ensure the proper Jekyll version is running.
 # Happy Jekylling!
-gem "jekyll", "~> 4.3"
+gem "jekyll", "~> 4.4"
 
-gem "jekyll-theme-hydejack", "~> 9.1"
+gem "jekyll-theme-hydejack", "~> 9.2"
 
 # If you are part of the ["Customers" team](https://github.com/orgs/hydecorp/teams/pro-customers), 
 # you can fetch the theme from a private repository. 
 # See [Deploy in the Hydejack Docs](https://hydejack.com/docs/deploy) for details.
 
-# gem "jekyll-theme-hydejack", git: "https://github.com/hydecorp/hydejack-pro", tag: "pro/v9.2.0"
+# gem "jekyll-theme-hydejack", git: "https://github.com/hydecorp/hydejack-pro", tag: "pro/v9.2.1"
 
 # IMPORTANT: The followign gem is used to compile math formulas to 
 # KaTeX during site building.
@@ -32,10 +32,8 @@ gem "jekyll-theme-hydejack", "~> 9.1"
 # If you're using the MathJax math engine instead, free to remove the line below:
 gem "kramdown-math-katex"
 
-# A JavaScript runtime for Ruby that helps with running the katex gem above.
-gem "duktape"
-
-# Required for `jekyll serve` in Ruby 3
+# Required for `jekyll serve` in Ruby 3.
+# KaTeX uses ExecJS and expects Node. The `duktape` gem cannot parse current KaTeX.
 gem "webrick"
 
 # Uncomment when using the `--lsi` option for `jekyll build`

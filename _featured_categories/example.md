@@ -16,7 +16,7 @@ description: >
 # (Optional) You can disable grouping posts by date.
 # no_groups: true
 
-# Exclude this example category from the sitemap.
-# DON'T USE THIS SETTING IN YOUR CATEGORIES!
+# Starter-kit sample. Hidden so it does not appear on the site.
+published: false
 sitemap: false
 ---
