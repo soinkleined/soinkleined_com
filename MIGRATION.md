@@ -1,10 +1,10 @@
 # Migration plan: daveklein.com and soinkleined.com
 
-Planning document only. Nothing in this repository changes HostRocket, Route 53, GitHub Pages settings, or the live sites. Checked 23 Oct 2026 from public DNS, RDAP, the live WordPress sites, and the public GitHub repositories. The HostRocket cPanel zone export is the source of truth for any record this document could not see. Reconcile the export with `migration/terraform/dns` before the first apply.
+Planning document only. Nothing in this repository changes HostRocket, Route 53, GitHub Pages settings, or the live sites. Checked 23 Oct 2026 from public DNS, RDAP, the live WordPress sites, and the public GitHub repositories. The HostRocket cPanel zone export is the source of truth for any record this document could not see. Reconcile the export with `tf-aws-dns/domains/<domain>/public` before the first apply.
 
 ## Recommendation
 
-Move registration to Amazon Route 53 Domains, and move DNS to two Route 53 public hosted zones managed by the Terraform in `migration/terraform`. Leave the HostRocket nameservers in place until those zones exist and have been diffed against the live zones. Serve each site from its own GitHub Pages project repository, with the apex as the canonical host and `www` redirected by GitHub. Copy the Google Workspace mail records unchanged on the first apply.
+Move registration to Amazon Route 53 Domains, and move DNS to two Route 53 public hosted zones managed by the Terraform in `tf-aws-dns`. Leave the HostRocket nameservers in place until those zones exist and have been diffed against the live zones. Serve each site from its own GitHub Pages project repository, with the apex as the canonical host and `www` redirected by GitHub. Copy the Google Workspace mail records unchanged on the first apply.
 
 Apply Terraform from the Mac with IAM Identity Center (section "Where to run Terraform"). The day-to-day policy is created by the bootstrap stack and is scoped to these zones plus the state object.
 
@@ -19,7 +19,7 @@ Phases 2, 3, and 5 can run in parallel once phase 0 and phase 1 are done. Phase 
 | 0. Inventory and backups | Nothing live | Nothing to undo |
 | 1. Lower TTLs on the HostRocket zones | Cached TTLs only | Put the previous TTLs back |
 | 2. Finish the static sites on `*.github.io/<repo>/` | GitHub only; public DNS still points at HostRocket | Leave the WordPress sites where they are |
-| 3. `terraform apply` the hosted zones | New zones that are not delegated | `terraform destroy` in `migration/terraform/dns` |
+| 3. `terraform apply` the hosted zones | New zones that are not delegated | `scripts/tf.sh <domain> public destroy` for the zone that was applied |
 | 4. Verify the domains in GitHub | A TXT record on the current authoritative DNS, and the same value in Terraform | Remove the TXT |
 | 5. Transfer registration to Route 53 Domains, nameservers unchanged | Registrar of record, after the transfer completes | Reject the transfer before it completes. After it completes, ICANN locks transfers away for 60 days. DNS rollback is still "put the old nameservers back" |
 | 6. Nameserver cutover | Delegation | Put `ns1.myworlddns.com` and `ns2.myworlddns.com` back at the registrar. This works only while the HostRocket zones still serve the pre-cutover data |
@@ -63,7 +63,7 @@ Both zones:
 | apex | AAAA | `2606:50c0:8000::153`, `2606:50c0:8001::153`, `2606:50c0:8002::153`, `2606:50c0:8003::153` |
 | `www` | CNAME | `soinkleined.github.io` |
 | apex | MX | `1 smtp.google.com` |
-| `google._domainkey` | TXT | the Google DKIM key already published; stored in `locals.tf` |
+| `google._domainkey` | TXT | the Google DKIM key already published; stored in `domains/<domain>/public/mail.tf` |
 | `_dmarc` | TXT | see below |
 
 `daveklein.com` apex TXT: `v=spf1 include:_spf.google.com ~all`
@@ -81,14 +81,14 @@ v=DMARC1;p=quarantine; rua=mailto:david@soinkleined.com
 
 | Name | Type | Value |
 | --- | --- | --- |
-| `x._domainkey` | TXT | cPanel DKIM key, in `locals.tf` |
+| `x._domainkey` | TXT | cPanel DKIM key, in `domains/soinkleined.com/public/mail.tf` |
 | `mail` | CNAME | `ghs.googlehosted.com` |
 | `calendar` | CNAME | `ghs.googlehosted.com` |
 | `docs` | CNAME | `ghs.googlehosted.com` |
 
 GitHub Pages addresses are the ones published in GitHub's custom-domain docs on 23 Oct 2026. Re-read that page before the first apply. The www target is the user Pages hostname for both zones. GitHub routes on the Host header to the repository that claimed that domain. The target does not include the repository name, and it is not a `*.pages.github.io` name.
 
-DKIM values are longer than a single Route 53 character-string. Terraform splits them at 255 octets. In a plan, the split shows up as `""` inside the TXT value. That marker is not part of the key. `terraform test` in `migration/terraform/dns` checks the published SPF, DMARC, and key lengths.
+DKIM values are longer than a single Route 53 character-string. Terraform splits them at 255 octets. In a plan, the split shows up as `""` inside the TXT value. That marker is not part of the key. `scripts/tf.sh <domain> public test` checks the published SPF, DMARC, and key lengths for that domain.
 
 TTL on every record Terraform manages is 300 until phase 8. A shorter TTL than today's 3600/14400 records is intentional.
 
@@ -101,7 +101,7 @@ These are cPanel defaults aimed at `216.120.240.100`. Leave them off the new zon
 
 No wildcard records. A wildcard delegated at GitHub Pages is a domain-takeover bug even after the domain is verified.
 
-Anything else in the export (a real subdomain, a verification TXT, a CAA) goes in `extra_apex_txt` or `extra_records` in `terraform.tfvars`. Apex TXT values share one record set, so a verification string is an extra value on the apex TXT, not a second resource. `extra_records` rejects NS, SOA, and the names this module already manages.
+Anything else in the export (a real subdomain, a verification TXT, a CAA) goes in `extra_apex_txt`, `caa_issuers`, or `extra_records` in that domain's `terraform.tfvars`. Apex TXT values share one record set, so a verification string is an extra value on the apex TXT, not a second resource. `extra_records` rejects NS, SOA, and the names the public-zone module already manages.
 
 ## Sites and repositories
 
@@ -189,98 +189,119 @@ Rollback: the WordPress sites are still the public sites.
 
 ## Phase 3 — Terraform the zones, do not delegate
 
-Terraform layout:
+The Terraform root is the private repository `soinkleined/tf-aws-dns`. This branch carries that tree at `tf-aws-dns/` because the GitHub App used to open this pull request is installed only on `soinkleined/soinkleined_com` and does not have `repository_creation` permission, so it cannot create the private repository. From a checkout of this branch the commands below run inside `tf-aws-dns/`. After the private repository exists, delete `tf-aws-dns/` from this public repository. The working copy there is the same layout.
+
+Create it from your own GitHub login, which can own private repositories on the free plan:
+
+```sh
+gh repo create soinkleined/tf-aws-dns --private --description "Route 53 zones for daveklein.com and soinkleined.com" --source tf-aws-dns --push
+```
+
+`--source` needs `tf-aws-dns/` to be its own git repository (`git init -b main` inside it, then commit). Push that history. Do not push this website repository's history.
+
+Each domain is its own root, and public and private are separate roots. One apply cannot touch the other domain. Mail data lives in the domain folder. The modules only know how to build a zone.
 
 | Path | Role |
 | --- | --- |
-| `migration/terraform/bootstrap` | State bucket and the IAM policy. Local state. `prevent_destroy` on the bucket |
-| `migration/terraform/dns` | Both hosted zones and the records in this document. Remote state |
-| `migration/terraform/iam/terraform-dns-policy.json.tftpl` | The policy bootstrap renders |
-| `migration/terraform/iam/github-actions-trust.json.example` | Trust policy if phase "Where to run Terraform" option (c) is used later |
-| `migration/terraform/dns/backend.hcl.example` | Copy to `backend.hcl` (gitignored) |
+| `domains/daveklein.com/public` | Public zone and the records in this document. State key `domains/daveklein.com/public/terraform.tfstate` |
+| `domains/daveklein.com/private` | Private zone. Creates nothing until `vpcs` is set |
+| `domains/soinkleined.com/public` | Same, for the other domain. Keeps the HostRocket SPF include and the cPanel DKIM key until phase 8 |
+| `domains/soinkleined.com/private` | Private zone. Creates nothing until `vpcs` is set |
+| `modules/public-zone`, `modules/private-zone` | Zone, records, TXT split. No mail data |
+| `bootstrap` | State bucket and the IAM policy. Local state. `prevent_destroy` on the bucket |
+| `iam/terraform-dns-policy.json.tftpl` | The policy bootstrap renders |
+| `iam/github-actions-trust.json.example` | Trust policy if option (c) under "Where to run Terraform" is used later |
+| `backend.hcl.example` | Copy to `backend.hcl` at the repo root (gitignored). No state key in the file |
+| `scripts/tf.sh` | `scripts/tf.sh <domain> <public\|private> <terraform arguments>` |
 
 Bootstrap once, from a principal that can create a bucket and a customer managed policy. The ongoing role does not have those rights.
 
 ```sh
-cd migration/terraform/bootstrap
+cd bootstrap
 cp terraform.tfvars.example terraform.tfvars   # set a globally unique bucket name
 terraform init
 terraform apply
 ```
 
-Copy `state_bucket`, `state_key`, and `aws_region` from the outputs into `migration/terraform/dns/backend.hcl`:
+Copy `backend.hcl.example` to `backend.hcl` and set `bucket` from the `state_bucket` output. Leave the key out. `scripts/tf.sh` sets it to `domains/<domain>/<public|private>/terraform.tfstate`. The lock object is that key plus `.tflock`.
 
 ```hcl
 bucket       = "<state_bucket>"
-key          = "dns/terraform.tfstate"
 region       = "us-east-1"
 encrypt      = true
 use_lockfile = true
 ```
 
-`use_lockfile` is native S3 locking (Terraform >= 1.10). The lock object is `<key>.tflock`. DynamoDB locking is deprecated in current Terraform and is not used. A DynamoDB table would only be a compatibility bridge for a Terraform older than 1.10, which this config refuses.
+`use_lockfile` is native S3 locking (Terraform >= 1.10). DynamoDB locking is deprecated in current Terraform and is not used. A DynamoDB table would only be a compatibility bridge for a Terraform older than 1.10, which this config refuses.
 
 ```sh
-cd migration/terraform/dns
-terraform init -backend-config=backend.hcl
-terraform test
-terraform plan
-terraform apply
+scripts/tf.sh daveklein.com public init
+scripts/tf.sh daveklein.com public test
+scripts/tf.sh daveklein.com public plan
+scripts/tf.sh daveklein.com public apply
+scripts/tf.sh soinkleined.com public init
+scripts/tf.sh soinkleined.com public test
+scripts/tf.sh soinkleined.com public plan
+scripts/tf.sh soinkleined.com public apply
 ```
 
-`terraform test` does not need AWS. It checks the mail strings and the DKIM split. `terraform plan` must be creates only: two zones and the records in this document. Defaults keep the HostRocket SPF include and the cPanel DKIM key. `github_pages_challenge` stays empty until phase 4, then it is a second apply.
+`test` does not need AWS. On a fresh checkout it initialises that root with `-backend=false`. It checks that domain's mail strings and the DKIM split. `plan` must be creates only: one zone and the records in this document for that domain. Defaults on `soinkleined.com` keep the HostRocket SPF include and the cPanel DKIM key. `github_pages_challenge` stays empty until phase 4, then it is a second apply of that domain only.
+
+Do not init or apply the private roots yet. With `vpcs` empty they create no zone. A private hosted zone cannot exist without a VPC, and omitting the VPC would publish a second public zone for the same name, so the module rejects an empty VPC list and the root does not call it. Set `vpcs` only when a VPC should resolve the name. That zone is another $0.50 per month, and it is not part of this cutover.
 
 The plan's DKIM lines contain `""`. That is the 255-octet boundary.
 
-`terraform output name_servers` is the delegation set. Those four names are not predictable until the zone exists. Nothing at the registrar should use them until phase 6.
+`scripts/tf.sh daveklein.com public output name_servers` is that domain's delegation set. `soinkleined.com` has its own. Those four names are not predictable until the zone exists. Nothing at the registrar should use them until phase 6.
 
 Route 53 will answer for the zone only on those nameservers. Creating the zone does not move traffic.
 
-Rollback: `terraform destroy` in `migration/terraform/dns`. `force_destroy` is false; Terraform deletes the records it owns, then the zone. The state bucket has `prevent_destroy` and is not part of that destroy.
+Rollback: `scripts/tf.sh <domain> public destroy`. `force_destroy` is false; Terraform deletes the records it owns, then the zone. A record it does not manage blocks the destroy. The other domain is a different state and is untouched. The state bucket has `prevent_destroy` and is not part of that destroy.
 
 ### Policy
 
 Bootstrap creates `soinkleined-terraform-dns`. It allows:
 
-- Route 53 record and zone operations on `arn:aws:route53:::hostedzone/*` and `arn:aws:route53:::change/*`: `ChangeResourceRecordSets`, `ChangeTagsForResource`, `DeleteHostedZone`, `GetChange`, `GetHostedZone`, `ListResourceRecordSets`, `ListTagsForResource`, `UpdateHostedZoneComment`
+- Route 53 record and zone operations on `arn:aws:route53:::hostedzone/*` and `arn:aws:route53:::change/*`: `AssociateVPCWithHostedZone`, `ChangeResourceRecordSets`, `ChangeTagsForResource`, `DeleteHostedZone`, `DisassociateVPCFromHostedZone`, `GetChange`, `GetHostedZone`, `ListResourceRecordSets`, `ListTagsForResource`, `UpdateHostedZoneComment`
 - `route53:CreateHostedZone` on `*`. Create cannot be scoped to a zone id that does not exist yet
-- `s3:ListBucket` on the state bucket, prefix limited to the state key
-- `s3:GetObject` and `s3:PutObject` on the state object
-- `s3:GetObject`, `s3:PutObject`, and `s3:DeleteObject` on the `.tflock` object
+- `s3:ListBucket` on the state bucket, when the prefix is `domains/` or anything under it
+- `s3:GetObject` and `s3:PutObject` on `domains/*/terraform.tfstate`
+- `s3:GetObject`, `s3:PutObject`, and `s3:DeleteObject` on `domains/*/terraform.tfstate.tflock`
 
-`DeleteObject` is on the lock object only. Terraform does not delete the state object. The bucket uses SSE-S3. Switching it to SSE-KMS requires `kms:Decrypt` and `kms:GenerateDataKey` on that key, which this policy does not grant.
+In an IAM resource ARN, `*` matches slashes, so `domains/*/terraform.tfstate` covers `domains/daveklein.com/public/terraform.tfstate` and a new domain under `domains/` does not need a policy edit. The state object and the lock object are separate statements. `DeleteObject` is on the lock object only. Terraform does not delete the state object. The bucket uses SSE-S3. Switching it to SSE-KMS requires `kms:Decrypt` and `kms:GenerateDataKey` on that key, which this policy does not grant.
 
-Two Route 53 actions showed up in a mechanical reading of the provider schema and are omitted because `hashicorp/aws` v6.70.0 does not call them for this configuration: `AssociateVPCWithHostedZone` runs only when a `vpc` block is set, and `UpdateHostedZoneFeatures` runs only when `enable_accelerated_recovery` is set. This stack sets neither. `UpdateHostedZoneComment` and `DeleteHostedZone` are included because the zone comment is a managed attribute and destroying an undelegated zone is the phase 3 rollback.
+`AssociateVPCWithHostedZone` and `DisassociateVPCFromHostedZone` are there because a private zone sends the first VPC on `CreateHostedZone` and every further VPC, and any later removal, through those two APIs (`hashicorp/aws` v6.70.0). `UpdateHostedZoneFeatures` stays omitted: nothing sets `enable_accelerated_recovery`. `UpdateHostedZoneComment` and `DeleteHostedZone` are included because the zone comment is a managed attribute and destroying an undelegated zone is the phase 3 rollback.
 
-The policy does not grant Route 53 Domains, IAM, or any other bucket. Registrar changes stay a separate, explicit step. Attach the policy to an Identity Center permission set. It grants nothing until it is attached.
+The policy does not grant Route 53 Domains, IAM, EC2, or any other bucket. Registrar changes stay a separate, explicit step. Attach the policy to an Identity Center permission set. It grants nothing until it is attached.
 
-S3 backend calls are not in a Terraform plan, so those three statements are the S3 backend permission list from the Terraform 1.14+ docs, with the prefix set to the state key. The upstream example prefixes the bucket name into `s3:prefix`; the object key is the value that `ListBucket` actually sends.
+S3 backend calls are not in a Terraform plan, so those three statements are the S3 backend permission list from the Terraform 1.14+ docs, with the prefix set to `domains/`. The upstream example prefixes the bucket name into `s3:prefix`; the object key is the value that `ListBucket` actually sends.
 
 ### Import
 
 If a zone already exists (hand-built, or created by a transfer wizard), import it instead of creating a second public zone. Two public zones for the same name can coexist. Only the delegated one answers, and both cost $0.50 per month.
 
-```sh
-terraform import 'aws_route53_zone.apex["daveklein.com"]' Z0123456789ABCDEFGHIJ
-terraform import 'aws_route53_record.apex_a["daveklein.com"]' Z0123456789ABCDEFGHIJ_daveklein.com_A
-terraform import 'aws_route53_record.apex_aaaa["daveklein.com"]' Z0123456789ABCDEFGHIJ_daveklein.com_AAAA
-terraform import 'aws_route53_record.www["daveklein.com"]' Z0123456789ABCDEFGHIJ_www.daveklein.com_CNAME
-terraform import 'aws_route53_record.mx["daveklein.com"]' Z0123456789ABCDEFGHIJ_daveklein.com_MX
-terraform import 'aws_route53_record.apex_txt["daveklein.com"]' Z0123456789ABCDEFGHIJ_daveklein.com_TXT
-terraform import 'aws_route53_record.dmarc["daveklein.com"]' Z0123456789ABCDEFGHIJ__dmarc.daveklein.com_TXT
-terraform import 'aws_route53_record.google_dkim["daveklein.com"]' Z0123456789ABCDEFGHIJ_google._domainkey.daveklein.com_TXT
-```
-
-Repeat for `soinkleined.com`, plus:
+Run the imports from that domain's public root, after `scripts/tf.sh <domain> public init`. The addresses are inside `module.zone`.
 
 ```sh
-terraform import 'aws_route53_record.cpanel_dkim[0]' Z0123456789ABCDEFGHIJ_x._domainkey.soinkleined.com_TXT
-terraform import 'aws_route53_record.google_app["mail.soinkleined.com"]' Z0123456789ABCDEFGHIJ_mail.soinkleined.com_CNAME
-terraform import 'aws_route53_record.google_app["calendar.soinkleined.com"]' Z0123456789ABCDEFGHIJ_calendar.soinkleined.com_CNAME
-terraform import 'aws_route53_record.google_app["docs.soinkleined.com"]' Z0123456789ABCDEFGHIJ_docs.soinkleined.com_CNAME
+scripts/tf.sh daveklein.com public import 'module.zone.aws_route53_zone.this' Z0123456789ABCDEFGHIJ
+scripts/tf.sh daveklein.com public import 'module.zone.aws_route53_record.github_pages_a[0]' Z0123456789ABCDEFGHIJ_daveklein.com_A
+scripts/tf.sh daveklein.com public import 'module.zone.aws_route53_record.github_pages_aaaa[0]' Z0123456789ABCDEFGHIJ_daveklein.com_AAAA
+scripts/tf.sh daveklein.com public import 'module.zone.aws_route53_record.www[0]' Z0123456789ABCDEFGHIJ_www.daveklein.com_CNAME
+scripts/tf.sh daveklein.com public import 'module.zone.aws_route53_record.this["mx"]' Z0123456789ABCDEFGHIJ_daveklein.com_MX
+scripts/tf.sh daveklein.com public import 'module.zone.aws_route53_record.this["apex_txt"]' Z0123456789ABCDEFGHIJ_daveklein.com_TXT
+scripts/tf.sh daveklein.com public import 'module.zone.aws_route53_record.this["dmarc"]' Z0123456789ABCDEFGHIJ__dmarc.daveklein.com_TXT
+scripts/tf.sh daveklein.com public import 'module.zone.aws_route53_record.this["google_dkim"]' Z0123456789ABCDEFGHIJ_google._domainkey.daveklein.com_TXT
 ```
 
-NS and SOA belong to the zone resource. Do not import them as records. After import, `terraform plan` should be empty, or it should show only the differences you are about to publish (the GitHub A/AAAA/CNAME, and a lower TTL). A plan that replaces an MX or a DKIM value is a bug in the tfvars. Read it.
+Repeat for `soinkleined.com` with that zone id, plus:
+
+```sh
+scripts/tf.sh soinkleined.com public import 'module.zone.aws_route53_record.this["cpanel_dkim"]' Z0123456789ABCDEFGHIJ_x._domainkey.soinkleined.com_TXT
+scripts/tf.sh soinkleined.com public import 'module.zone.aws_route53_record.this["mail"]' Z0123456789ABCDEFGHIJ_mail.soinkleined.com_CNAME
+scripts/tf.sh soinkleined.com public import 'module.zone.aws_route53_record.this["calendar"]' Z0123456789ABCDEFGHIJ_calendar.soinkleined.com_CNAME
+scripts/tf.sh soinkleined.com public import 'module.zone.aws_route53_record.this["docs"]' Z0123456789ABCDEFGHIJ_docs.soinkleined.com_CNAME
+```
+
+The `_dmarc` import id has two underscores: the zone id, then `_`, then the record name `_dmarc...`. NS and SOA belong to the zone resource. Do not import them as records. After import, `scripts/tf.sh <domain> public plan` should be empty, or it should show only the differences you are about to publish (the GitHub A/AAAA/CNAME, and a lower TTL). A plan that replaces an MX or a DKIM value is a bug in that domain's tfvars. Read it.
 
 A record that exists in the zone and is not imported will make apply fail with "already exists". Import it, or delete that one console record, then apply. The next `terraform plan` is the drift check from then on. A console edit shows up there. Put it back by apply, or import the intended change into the config. The lockfile is what keeps two applies from writing the state at once. Versioning on the bucket is how a bad state object is restored.
 
@@ -315,7 +336,7 @@ Preconditions: phase 1's TTL wait has elapsed, phase 2's project URLs look right
 
 At the start of the cutover, disable WordPress cron, comment posting, and any mail-sending plugin on the HostRocket copy. Resolvers will keep using the old nameservers until the parent NS TTL expires, so that host will still receive some traffic and would otherwise keep emitting the MailChannels mail.
 
-Delegation, after `terraform output -json name_servers`:
+Delegation, after `scripts/tf.sh daveklein.com public output -json name_servers` (and the same command for `soinkleined.com`; the two sets differ):
 
 ```sh
 aws route53domains update-domain-nameservers \
@@ -403,14 +424,14 @@ Rollback of a mail failure is phase 6's nameserver revert. Do not "fix" it by de
 
 When GitHub enables the checkbox, turn on Enforce HTTPS for both repositories. Canonical host is the apex, so www 301s to it. That is the reverse of today's WordPress redirect. Both names still resolve.
 
-After the parent NS TTL has expired and at least one week of DMARC reports shows no MailChannels or other HostRocket source:
+After the parent NS TTL has expired and at least one week of DMARC reports shows no MailChannels or other HostRocket source, set these in `domains/soinkleined.com/public` (they are not variables on daveklein.com):
 
 ```hcl
 include_hostrocket_spf = false
 include_cpanel_dkim    = false
 ```
 
-`terraform plan` should show two changes: the soinkleined.com apex TXT loses `include:_spf.hostrocket.com`, and `x._domainkey.soinkleined.com` is destroyed. `daveklein.com` SPF was already Google-only and must stay that way. Apply, then send one more mail from each domain and check `dmarc=pass`.
+`scripts/tf.sh soinkleined.com public plan` should show two changes: the apex TXT loses `include:_spf.hostrocket.com`, and `x._domainkey.soinkleined.com` is destroyed. `daveklein.com` SPF was already Google-only and must stay that way. Apply, then send one more mail from each domain and check `dmarc=pass`.
 
 `p=reject` is a later apply, after several clean weekly reports:
 
@@ -418,15 +439,12 @@ include_cpanel_dkim    = false
 dmarc_policy = "reject"
 ```
 
-That produces `v=DMARC1;p=reject; rua=mailto:...` with the same rua addresses. Tightening SPF from `~all` to `-all` can ride along with that change. It is a one-line edit in `locals.tf`, reviewed in the plan. Leave rua in place.
+That produces `v=DMARC1;p=reject; rua=mailto:...` with the same rua addresses. Tightening SPF from `~all` to `-all` can ride along with that change. It is a one-line edit in that domain's `mail.tf`, reviewed in the plan. Leave rua in place.
 
-Optional after that: raise `record_ttl` from 300 to 3600. Optional CAA:
+Optional after that: raise `record_ttl` from 300 to 3600. Optional CAA, in each public root's `terraform.tfvars`:
 
 ```hcl
-caa_issuers = {
-  "daveklein.com"   = ["letsencrypt.org"]
-  "soinkleined.com" = ["letsencrypt.org"]
-}
+caa_issuers = ["letsencrypt.org"]
 ```
 
 Rollback: set the flags and `dmarc_policy` back and apply. Turn off Enforce HTTPS if a certificate mis-issue ever requires it.
@@ -442,7 +460,7 @@ All of these are true before cancellation:
 - Phase 7's mail test has been repeated after that TTL
 - Cron jobs found in phase 0 are disabled or irrelevant, and nothing else (another domain, a certificate renewal, a billing contact) depends on the account
 - Domain renewal is no longer billed by HostRocket. The transfer is what makes that true
-- A final `terraform plan` is empty
+- A final `scripts/tf.sh <domain> public plan` is empty for both domains
 
 Then cancel. There is no rollback.
 
@@ -452,15 +470,17 @@ Recommendation: the Mac, option (a). Two zones and a few applies a year do not n
 
 | | (a) Mac | (b) Linux host or VM he runs | (c) GitHub Actions, OIDC | (d) Console |
 | --- | --- | --- | --- | --- |
-| Credentials | `aws login` or IAM Identity Center. Permission set carries `soinkleined-terraform-dns`. No access keys | The same profile, or an instance profile of a role with that policy if the host is single-purpose. No access keys on disk | `sts:AssumeRoleWithWebIdentity`. Trust is `github-actions-trust.json.example`: audience `sts.amazonaws.com`, subject `repo:soinkleined/soinkleined_com:environment:dns`. Create the GitHub environment `dns` with required reviewers. No stored keys | SSO session in the console. No keys |
-| State | S3, versioned, SSE-S3, public access blocked, `use_lockfile = true` | Same bucket | Same bucket. Apply from the protected environment only | No state. The console becomes the source of drift |
-| Drift | `terraform plan` | `terraform plan` | Plan on the pull request, apply on the environment | Every click is drift. Follow it with a plan and either import or revert |
-| Effort | One bootstrap apply, then a plan and apply per change | The same, plus patching a machine that has no other reason to exist | OIDC provider, role, environment protection, and a workflow. Worth it when someone else should approve a DNS change | Fastest for one record. Slower from the second edit onward |
-| Cost | $0 of compute | $0 if the machine already exists. A new VM is wasted money at this size | Public-repo Actions minutes. Effectively $0 for a handful of applies | $0 |
+| Credentials | `aws login` or IAM Identity Center. Permission set carries `soinkleined-terraform-dns`. No access keys | The same profile, or an instance profile of a role with that policy if the host is single-purpose. No access keys on disk | `sts:AssumeRoleWithWebIdentity`. Trust is `iam/github-actions-trust.json.example`: audience `sts.amazonaws.com`, subject `repo:soinkleined/tf-aws-dns:ref:refs/heads/main`. No stored keys | SSO session in the console. No keys |
+| State | S3, versioned, SSE-S3, public access blocked, `use_lockfile = true`. One object per domain root | Same bucket | Same bucket. Apply from `main` only, which is what that subject allows | No state. The console becomes the source of drift |
+| Drift | `scripts/tf.sh <domain> public plan` | The same | Plan on the pull request, apply on `main` | Every click is drift. Follow it with a plan and either import or revert |
+| Effort | One bootstrap apply, then a plan and apply per change | The same, plus patching a machine that has no other reason to exist | OIDC provider, role, and a workflow. Worth it when someone else should approve a DNS change | Fastest for one record. Slower from the second edit onward |
+| Cost | $0 of compute | $0 if the machine already exists. A new VM is wasted money at this size | Private-repo Actions minutes. The free plan includes 2,000 minutes a month. A handful of applies stays inside that | $0 |
 
-`backend.hcl` and `terraform.tfvars` stay on the machine that applies. They hold the bucket name and, later, the GitHub challenge token. They are gitignored. The state file holds the zone contents, which are public DNS, including the DKIM public keys. Keep the bucket private anyway. Bootstrap's bucket policy denies non-TLS. Restoring a bad apply is an S3 object-version restore of `dns/terraform.tfstate`, then `terraform plan`.
+A free GitHub account can hold the private DNS repository. It cannot use environments or required reviewers on a private repository; those need GitHub Pro. The example trust subject is therefore the `main` branch, not a GitHub environment. With Pro, change the subject to `repo:soinkleined/tf-aws-dns:environment:dns` and add required reviewers on an environment named `dns`. A subject of `repo:soinkleined/*` would let any workflow in the account assume the role. The example does not do that.
 
-Do not put long-lived keys in `~/.aws/credentials` for this. Identity Center is the Mac path. The Actions path uses the OIDC provider `https://token.actions.githubusercontent.com` with client id `sts.amazonaws.com`, then a role whose permissions policy is the one bootstrap created and whose trust is the example file with `ACCOUNT_ID` replaced. A wildcard `sub` of `repo:soinkleined/*` would let any workflow in the account assume the role. The example does not do that.
+`backend.hcl` and `terraform.tfvars` stay on the machine that applies. They hold the bucket name and, later, the GitHub challenge token. They are gitignored. Each state object holds that zone's contents, which are public DNS, including the DKIM public keys. Keep the bucket private anyway. Bootstrap's bucket policy denies non-TLS. Restoring a bad apply is an S3 object-version restore of `domains/<domain>/public/terraform.tfstate`, then plan.
+
+Do not put long-lived keys in `~/.aws/credentials` for this. Identity Center is the Mac path. The Actions path uses the OIDC provider `https://token.actions.githubusercontent.com` with client id `sts.amazonaws.com`, then a role whose permissions policy is the one bootstrap created and whose trust is the example file with `ACCOUNT_ID` replaced.
 
 Option (d) is the break-glass path during an outage when Terraform is not at hand. The following `terraform plan` is what puts the zone back under the config. A Route 53 change-batch file is intentionally not in this repo. It would be a second source of truth.
 
@@ -472,7 +492,7 @@ Checked against the Route 53 pricing page and the domain price list on 23 Oct 20
 
 | Item | Cost |
 | --- | --- |
-| Two public hosted zones | $0.50 each, $1.00 per month, not prorated. A zone deleted within 12 hours is not billed; queries still are |
+| Two public hosted zones | $0.50 each, $1.00 per month, not prorated. A zone deleted within 12 hours is not billed; queries still are. A private zone, if one is created later, is another $0.50. The private roots create none until `vpcs` is set |
 | Standard queries | $0.40 per million for the first billion. These are not alias records, so they are billed. Two personal zones plus mail lookups should stay well under a million queries a month, so the query line is cents, not dollars |
 | State bucket | Versioned JSON. Pennies, inside S3 free-tier noise if the account still has it |
 | DynamoDB, Resolver, health checks, DNSSEC KMS | $0. None of them are in this design. DNSSEC signing later is a KMS key on top |

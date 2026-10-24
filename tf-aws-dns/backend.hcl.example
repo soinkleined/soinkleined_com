@@ -1,0 +1,7 @@
+# Copy to backend.hcl (gitignored) after bootstrap, and set the bucket name.
+# scripts/tf.sh supplies the state key for the domain root you are in.
+# Do not put a key in this file.
+bucket       = "REPLACE_WITH_STATE_BUCKET"
+region       = "us-east-1"
+encrypt      = true
+use_lockfile = true

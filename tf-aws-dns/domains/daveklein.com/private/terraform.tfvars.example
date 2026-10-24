@@ -1,0 +1,17 @@
+# Leave vpcs empty until a VPC should resolve this name.
+# Applying with an empty list creates nothing.
+#
+# vpcs = [
+#   {
+#     vpc_id     = "vpc-0123456789abcdef0"
+#     vpc_region = "eu-west-2"
+#   }
+# ]
+#
+# records = {
+#   db = {
+#     name    = "db.daveklein.com"
+#     type    = "CNAME"
+#     records = ["db.internal.example"]
+#   }
+# }

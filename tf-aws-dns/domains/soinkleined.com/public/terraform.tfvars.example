@@ -1,0 +1,21 @@
+aws_region = "us-east-1"
+record_ttl  = 300
+
+# Leave these at the defaults until the HostRocket mail leftovers are gone.
+include_hostrocket_spf = true
+include_cpanel_dkim    = true
+dmarc_policy           = "quarantine"
+
+github_pages_challenge = ""
+
+# extra_apex_txt = ["google-site-verification=abcdef"]
+
+# caa_issuers = ["letsencrypt.org"]
+
+# extra_records = {
+#   blog = {
+#     name    = "blog.soinkleined.com"
+#     type    = "CNAME"
+#     records = ["example.github.io"]
+#   }
+# }

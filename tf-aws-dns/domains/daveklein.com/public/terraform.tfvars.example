@@ -1,0 +1,22 @@
+aws_region = "us-east-1"
+record_ttl  = 300
+
+dmarc_policy = "quarantine"
+
+# Fill from GitHub → Settings → Pages → the domain verification TXT.
+# Verify against HostRocket first. This value must also be in this zone
+# before the nameserver cutover.
+github_pages_challenge = ""
+
+# Apex TXT values other than SPF. Example:
+# extra_apex_txt = ["google-site-verification=abcdef"]
+
+# caa_issuers = ["letsencrypt.org"]
+
+# extra_records = {
+#   blog = {
+#     name    = "blog.daveklein.com"
+#     type    = "CNAME"
+#     records = ["example.github.io"]
+#   }
+# }
