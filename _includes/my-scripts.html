@@ -1,0 +1,100 @@
+<script type="module">
+  const base = (window._baseURL || "/").replace(/\/?$/, "/");
+  let pages = null;
+
+  let attempts = 0;
+
+  function mount() {
+    const bar = document.querySelector("#_navbar > .content > .nav-btn-bar");
+    const tpl = document.getElementById("_search-template");
+    if (!bar || !tpl || document.getElementById("_search")) return;
+
+    const darkReady = !document.getElementById("_dark-mode-template") || document.getElementById("_dark-mode");
+    if (!darkReady && attempts++ < 60) {
+      requestAnimationFrame(mount);
+      return;
+    }
+
+    const span = bar.querySelector(".nav-span");
+    const dark = document.getElementById("_dark-mode");
+    bar.insertBefore(tpl.content.cloneNode(true), dark ? dark.nextSibling : span);
+
+    const button = document.getElementById("_search");
+    const box = document.getElementById("_search-box");
+    const input = document.getElementById("_search-input");
+    const hits = document.getElementById("_hits");
+
+    function close() {
+      box.classList.remove("show");
+      hits.classList.remove("show");
+      hits.replaceChildren();
+      input.value = "";
+    }
+
+    function render() {
+      const query = input.value.trim().toLowerCase();
+      hits.replaceChildren();
+      if (!query || !pages) {
+        hits.classList.remove("show");
+        return;
+      }
+      const found = pages.filter(page =>
+        (page.title + " " + page.content).toLowerCase().includes(query)
+      ).slice(0, 8);
+      const list = document.createElement("ul");
+      if (!found.length) {
+        const empty = document.createElement("li");
+        empty.className = "search-empty";
+        empty.textContent = "No matches";
+        list.appendChild(empty);
+      } else {
+        for (const page of found) {
+          const item = document.createElement("li");
+          const link = document.createElement("a");
+          link.href = page.url;
+          const title = document.createElement("span");
+          title.textContent = page.title;
+          const excerpt = document.createElement("small");
+          excerpt.textContent = page.content;
+          link.append(title, excerpt);
+          link.addEventListener("click", close);
+          item.appendChild(link);
+          list.appendChild(item);
+        }
+      }
+      hits.appendChild(list);
+      hits.classList.add("show");
+    }
+
+    async function load() {
+      if (pages) return;
+      const response = await fetch(base + "assets/sitedata.json");
+      pages = await response.json();
+    }
+
+    button.addEventListener("click", () => {
+      if (box.classList.contains("show")) {
+        close();
+        return;
+      }
+      box.classList.add("show");
+      input.focus();
+      load().then(render);
+    });
+    box.querySelector("button[type=reset]").addEventListener("click", event => {
+      event.preventDefault();
+      close();
+    });
+    input.addEventListener("input", () => load().then(render));
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") close();
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", mount);
+  } else {
+    mount();
+  }
+  document.getElementById("_pushState")?.addEventListener("hy-push-state-load", mount);
+</script>
