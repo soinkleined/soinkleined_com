@@ -1,3 +1,19 @@
+<template id="_search-template">
+  <button id="_search" class="nav-btn no-hover" type="button">
+    <label class="sr-only" for="_search-input">Search</label>
+    <span class="icon-search"></span>
+  </button>
+  <div id="_search-box">
+    <div class="nav-btn"><span class="icon-search"></span></div>
+    <input id="_search-input" type="search" class="nav-btn" placeholder="Type something…" autocomplete="off">
+    <button type="reset" class="nav-btn no-hover">
+      <span class="sr-only">Close</span>
+      <span class="icon-cross"></span>
+    </button>
+  </div>
+  <div id="_hits"></div>
+</template>
+
 <!--
 Code for integrating CloudFlare's email protection with Hydejack's single page app loading.
 -->

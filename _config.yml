@@ -43,8 +43,6 @@ logo:                  /assets/img/logo.png
 author:
   # Used by `jekyll-feed`:
   name:                David Klein
-  # # Used by `jekyll-seo-tag`:
-  twitter:             soinkleined
 
 # Add links to the sidebar.
 menu:
@@ -245,12 +243,11 @@ hydejack:
   # Similarly, showing last modified date can devalue a post if it is too far in the past.
   hide_last_modified:  false
 
-  # Note that dark mode only works in the PRO version of Hydejack.
+  # Same behavior as hydejack.com: follow the system theme, with a navbar switch.
   dark_mode:
-    # The existing site is light only.
     always:            false
-    dynamic:           false
-    icon:              false
+    dynamic:           true
+    icon:              true
 
   # ⚡️ DANGER ZONE ⚡️
   # ----------------
@@ -331,8 +328,8 @@ plugins:
 #   yandex:              <verification-id>
 
 # Used for twitter cards
-twitter:
-  username:            soinkleined
+# twitter:
+#   username:            soinkleined
 
 # Used for facebook open graph
 # facebook:
@@ -344,9 +341,9 @@ twitter:
 social:
   name:                So Inkleined Consulting LTD
   links:
-    - https://twitter.com/soinkleined
-    - https://www.facebook.com/soinkleined
-    - https://www.linkedin.com/company/so-inkleined-consulting-ltd
+    - https://github.com/soinkleined
+    - https://www.linkedin.com/in/davidjklein
+    - mailto:david@soinkleined.com
 
 
 # Plugin Configs
