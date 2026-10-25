@@ -7,7 +7,7 @@ description: >
 hide_description: true
 ---
 
-Cloud and Infrastructure Services Engineering.
+Senior Manager, Cloud and Infrastructure Services Engineering.
 {:.lead}
 
 <p class="cv-actions"><a class="cv-print" href="javascript:window.print()">Print</a></p>
@@ -18,7 +18,7 @@ Cloud and Infrastructure Services Engineering.
     <li><a href="mailto:david@soinkleined.com">david@soinkleined.com</a></li>
     <li><a href="tel:+447791296237">+44 (0)7791296237</a></li>
     <li><a href="https://www.linkedin.com/in/davidjklein">LinkedIn</a></li>
-    <li><a href="https://github.com/soinkleined">GitHub</a></li>
+    <li><a href="https://twitter.com/soinkleined">soinkleined</a></li>
   </ul>
 </div>
 
@@ -78,7 +78,7 @@ Sept 2021 — Jan 2022
 - Consulted on end-to-end integration of internal systems with cloud services, using cloud adoption to rationalise legacy platforms and improve efficiency, data integrity, and automation.
 - Selected for the DB Cloud Engineering programme to support responsibilities as a Google Cloud Platform architect.
 - Selected for the internal Global Enterprise Engineering programme, recognising technical thought leadership and driving engineering culture change across the organisation.
-- Conceptualised and defined requirements for the [FINOS RSS Spring-Bot](https://springbot.finos.org/) initiative ([rss-bot](https://github.com/finos/spring-bot/tree/spring-bot-master/tools/rss-bot)).
+- Conceptualised and defined requirements for the FINOS RSS Spring-Bot initiative ([springbot.finos.org](https://springbot.finos.org/)).
 - Served as a code reviewer for Spring-Bot open-source contributions.
 
 ### Vice President — Application Owner, Autobahn Platform Services, Deutsche Bank
@@ -117,7 +117,7 @@ Feb 2016 — Sept 2017
 - Coordinated workloads and deliverables for external staff and contractors.
 - Managed vendor and client relationships to ensure delivery alignment and service quality.
 
-### UNIX Technical Lead — Technical Access Management Program (Contract, 1 renewal), Deutsche Bank
+### UNIX Technical Lead — Technical Access Management Program (Contract), Deutsche Bank
 London, UK
 {:.cv-meta}
 
@@ -130,7 +130,7 @@ Mar 2015 — Sept 2015
 - Defined and implemented SSH key policies for public and private keys, establishing standardised key formats to ensure traceability, ownership, and integrity across global production environments.
 - Remediated non-compliant and erroneous SSH keys across the global production estate, reducing security risk and audit findings.
 
-### UNIX Consultant — Administrative Minimal Rights Program (Contract, 4 renewals), Deutsche Bank
+### UNIX Consultant — Administrative Minimal Rights Program (Contract), Deutsche Bank
 London, UK
 {:.cv-meta}
 
@@ -199,3 +199,9 @@ Raintree Publish-A-Book contest winner.
 ## Training and Certification
 
 [LinkedIn verified certifications](https://www.linkedin.com/in/davidjklein/details/certifications/)
+
+## Open source
+
+**FINOS Spring-Bot RSS.** Defined requirements for the FINOS RSS Spring-Bot initiative and reviewed Spring-Bot contributions.
+
+**FINOS Plexus Interop.** Supported Deutsche Bank’s first open-source release.
