@@ -1,12 +1,30 @@
 // Match soinkleined.com: Roboto, gray body text, logo navy headings,
 // and the gray text selection from the current site.
 
-body {
+@mixin brand-text {
   color: #626262;
+
+  h1, h2, h3, h4, h5, h6 {
+    color: #363645;
+  }
+
+  .cv-meta {
+    color: #626262;
+  }
+
+  .cv-dates {
+    color: rgb(35, 110, 169);
+  }
 }
 
-h1, h2, h3, h4, h5, h6 {
-  color: #363645;
+body.light-mode {
+  @include brand-text;
+}
+
+@media screen and (prefers-color-scheme: light) {
+  body:not(.dark-mode) {
+    @include brand-text;
+  }
 }
 
 ::selection {
@@ -45,16 +63,30 @@ h1, h2, h3, h4, h5, h6 {
 .cv-meta,
 .cv-dates {
   margin: 0;
-  color: #626262;
   font-size: 0.95rem;
 }
 
 .cv-dates {
   margin-bottom: 0.75rem;
-  color: rgb(35, 110, 169);
+  color: #3ea0ce;
 }
 
 @media print {
+  body,
+  body.dark-mode {
+    color: #626262;
+    background: #fff;
+  }
+
+  h1, h2, h3, h4, h5, h6,
+  .cv-meta {
+    color: #363645;
+  }
+
+  .cv-dates {
+    color: rgb(35, 110, 169);
+  }
+
   .cv-actions,
   .sidebar,
   hy-drawer,
