@@ -1,5 +1,5 @@
 # Builds this Hydejack site and deploys _site to GitHub Pages.
-# Production host is https://www.soinkleined.com (baseurl '' in _config.yml).
+# _config.yml keeps url https://www.soinkleined.com and baseurl '' for local serve.
 name: Deploy Jekyll site to Pages
 
 on:
@@ -47,11 +47,17 @@ jobs:
         uses: actions/configure-pages@v6
 
       - name: Build with Jekyll
-        # Do not pass --baseurl from steps.pages.outputs.base_path.
-        # That value is /soinkleined_com until the custom domain is saved,
-        # which would prefix every URL. _config.yml already sets baseurl: ''
-        # for https://www.soinkleined.com.
-        run: bundle exec jekyll build
+        # configure-pages@v6 sets origin and base_path from the live Pages site.
+        # Before a custom domain is saved, that is https://soinkleined.github.io
+        # and /soinkleined_com, so CSS, images, and links resolve on the project
+        # URL. After www.soinkleined.com is saved in Pages, the same step gets
+        # that origin and a quoted empty baseurl, with no further workflow edit.
+        run: |
+          cat > "$RUNNER_TEMP/jekyll-pages.yml" <<'EOF'
+          url: "${{ steps.pages.outputs.origin }}"
+          baseurl: "${{ steps.pages.outputs.base_path }}"
+          EOF
+          bundle exec jekyll build --config _config.yml,"$RUNNER_TEMP/jekyll-pages.yml"
         env:
           JEKYLL_ENV: production
 
