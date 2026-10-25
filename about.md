@@ -4,15 +4,12 @@ title: About
 description: >
   So Inkleined Consulting LTD, owned and operated by David Klein.
   The company is no longer trading.
+hide_description: true
 image:
   path: /assets/img/sidebar-bg.jpg
 ---
 
-# About
-
 <!--author-->
-
-So Inkleined Consulting LTD, owned and operated by David Klein, is no longer trading.
 
 David’s IT career spans over twenty years. Shortly after graduating from Kent State University in 1999, he began working for 24/7 Media in Vienna, Virginia. 24/7 Media (now WPP’s 24/7 Real Media) is one of the world’s largest online advertising and marketing companies. While he was there, he helped expand and support their Operations infrastructure in data centers across the United States for two years. At the time, 24/7 had the third largest reach on the internet behind MSN and Yahoo and the world’s largest opt-in email database for direct marketing.
 
